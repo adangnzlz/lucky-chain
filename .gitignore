@@ -1,0 +1,39 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+
+# Hardhat specific
+artifacts/
+cache/
+coverage/
+typechain/
+
+# MacOS
+.DS_Store
+
+# Linux
+*.swp
+
+# VS Code
+.vscode/
+.history/
+
+# Git files
+*.log
+*.tmp
+
+# IDEs and editors
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.code-workspace
+
+# MetaMask and Ethereum Wallet files
+*.keystore
+*.secrets
+
+# Compiled contracts
+*.json
