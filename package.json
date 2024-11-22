@@ -1,23 +1,32 @@
 {
   "scripts": {
+    "node": "npx hardhat node",
+    "node-compile": "npx hardhat node & npm run watch:compile",
+    "node-compile-test": "npx hardhat node & npm run watch:compile & npm run watch:test",
     "test": "npx hardhat test",
     "compile": "npx hardhat compile",
     "coverage": "npx hardhat coverage",
     "deploy-hardhat": "npx hardhat run scripts/deploy-hardhat.ts",
-    "deploy-sepolia": "npx hardhat run scripts/deploy-sepolia.ts --network sepolia"
+    "deploy-sepolia": "npx hardhat run scripts/deploy-sepolia.ts --network sepolia",
+    "watch:compile": "chokidar 'contracts/**/*.sol' -c 'npx hardhat compile'",
+    "watch:test": "chokidar 'contracts/**/*.sol' 'test/**/*.js' -c 'npx hardhat test'"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@nomiclabs/hardhat-waffle": "^2.0.6",
+    "@openzeppelin/contracts": "^5.1.0",
     "@types/chai": "^5.0.1",
     "@types/mocha": "^10.0.9",
-    "@types/node": "^22.9.0",
+    "@types/node": "^22.9.1",
     "chai": "^4.5.0",
+    "chokidar": "^4.0.1",
+    "chokidar-cli": "^3.0.0",
     "dotenv": "^16.4.5",
     "esm": "^3.2.25",
     "ethereum-waffle": "^4.0.10",
     "ethers": "^5.7.2",
     "hardhat": "^2.22.16",
+    "solc": "^0.8.28",
     "solidity-coverage": "^0.8.13",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3"

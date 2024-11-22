@@ -57,3 +57,4 @@ ignition/deployments/chain-31337
 
 .states/
 .mocharc.json
+README-PRIVATE.md

@@ -140,4 +140,3 @@ Si deseas desplegar el contrato en la red principal de Ethereum, sigue estos pas
 ## Licencia
 Este proyecto está licenciado bajo la MIT License. Consulta el archivo LICENSE para obtener más detalles.
 
-Sepolia address contract 0xFeB42E412e816c8A0D18A821AF4d22E817c905D3
