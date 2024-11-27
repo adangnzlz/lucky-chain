@@ -36,10 +36,35 @@ contract Lottery is VRFConsumerBaseV2 {
         COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
     }
 
-    function enter() public payable virtual {
+    modifier minPlayers() {
+        require(players.length > 1, "No minimum players in the lottery");
+        _;
+    }
+    modifier restricted() {
+        require(
+            msg.sender == manager,
+            "Only the manager can call this function"
+        );
+        _;
+    }
+    modifier validTicket() virtual {
         require(msg.value == lotteryTicket, "Incorrect ticket ammount");
+        _;
+    }
+
+    function enter() public payable validTicket {
         players.push(msg.sender);
         emit PlayerEntered(msg.sender);
+    }
+
+    function pickWinner() public virtual restricted minPlayers {
+        COORDINATOR.requestRandomWords(
+            keyHash,
+            subscriptionId,
+            requestConfirmations,
+            callbackGasLimit,
+            numWords
+        );
     }
 
     function getPlayers() public view returns (address[] memory) {
@@ -62,27 +87,5 @@ contract Lottery is VRFConsumerBaseV2 {
         uint contractBalance = address(this).balance;
         (bool success, ) = winner.call{value: contractBalance}("");
         require(success, "Ether transaction failed");
-    }
-
-    function pickWinner() public virtual restricted minPlayers {
-        COORDINATOR.requestRandomWords(
-            keyHash,
-            subscriptionId,
-            requestConfirmations,
-            callbackGasLimit,
-            numWords
-        );
-    }
-
-    modifier minPlayers() {
-        require(players.length > 1, "No minimum players in the lottery");
-        _;
-    }
-    modifier restricted() {
-        require(
-            msg.sender == manager,
-            "Only the manager can call this function"
-        );
-        _;
     }
 }

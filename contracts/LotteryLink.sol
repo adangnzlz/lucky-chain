@@ -15,32 +15,31 @@ contract LotteryLink is Lottery {
         bytes32 _keyHash,
         address _tokenAddress
     )
-        Lottery(_subscriptionId, _vrfCoordinator, _keyHash) // Llama al constructor de Lottery
+        Lottery(_subscriptionId, _vrfCoordinator, _keyHash) 
     {
-        token = IERC20(_tokenAddress); // Inicializa el token ERC20
-        // lotteryTicket = 1 * 10 ** 18;
+        token = IERC20(_tokenAddress); 
     }
- 
-    function enter() public payable override {
+
+    modifier validTicket() override {
         require(
             token.transferFrom(msg.sender, address(this), lotteryTicket),
             "Token transfer failed"
         );
-
-        players.push(msg.sender);
+        _;
     }
 
-    function checkSubscriptionFunds()
-        public
-        view
-        returns (
-            uint96 balance,
-            uint64 reqCount,
-            address owner,
-            address[] memory consumers
-        )
-    {
-        return COORDINATOR.getSubscription(subscriptionId);
+    function setGasLimit(uint32 newGasLImit) external restricted {
+        callbackGasLimit = newGasLImit;
+    }
+
+
+    function pickWinner() public override restricted minPlayers {
+        (uint96 balance, , , ) = COORDINATOR.getSubscription(subscriptionId);
+        require(
+            balance >= callbackGasLimit * tx.gasprice,
+            "Insufficient funds in the subscription"
+        );
+        super.pickWinner();
     }
 
     function distributePrize(address winner) internal override {
@@ -49,18 +48,5 @@ contract LotteryLink is Lottery {
             token.transfer(winner, contractBalance),
             "Token transfer failed"
         );
-    }
-
-    function pickWinner() public override restricted minPlayers {
-        (uint96 balance, , , ) = checkSubscriptionFunds();
-        require(
-            balance >= callbackGasLimit * tx.gasprice,
-            "Insufficient funds in the subscription"
-        );
-        super.pickWinner();
-    }
-
-    function setGasLimit(uint32 newGasLImit) external restricted {
-        callbackGasLimit = newGasLImit;
     }
 }
