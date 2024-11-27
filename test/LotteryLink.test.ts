@@ -12,6 +12,7 @@ describe("LotteryLink Contract", function () {
   let addr1: Signer;
   let addr2: Signer;
   let subscriptionId: number;
+  let decimals: number;
 
   beforeEach(async function () {
     const LinkTokenMock = await ethers.getContractFactory("LinkTokenMock");
@@ -31,7 +32,6 @@ describe("LotteryLink Contract", function () {
     subscriptionId = receipt.events[0].args.subId;
     const keyHash = ethers.constants.HashZero; // Hash dummy
 
-
     lottery = await Lottery.deploy(
       subscriptionId,
       vrfCoordinatorMock.address,
@@ -41,8 +41,8 @@ describe("LotteryLink Contract", function () {
     await lottery.deployed();
 
     await vrfCoordinatorMock.addConsumer(subscriptionId, lottery.address);
-
-    const amount = ethers.utils.parseUnits("10", 18); // 10 tokens
+    decimals = await lottery.getDecimals(linkToken.address);
+    const amount = ethers.utils.parseUnits("10", decimals); // 10 tokens
     const addr1Address = await addr1.getAddress();
     const addr2Address = await addr2.getAddress();
 
@@ -50,7 +50,7 @@ describe("LotteryLink Contract", function () {
     await linkToken.transfer(addr2Address, amount);
 
     await linkToken.connect(addr1).approve(lottery.address, amount);
-    await linkToken.connect(addr2).approve(lottery.address, amount);    
+    await linkToken.connect(addr2).approve(lottery.address, amount);
   });
 
   it("Should set the correct manager", async function () {
@@ -64,7 +64,6 @@ describe("LotteryLink Contract", function () {
     const players: string[] = await lottery.getPlayers();
     expect(players).to.include(addr1Address);
   });
-
 
   it("Should only allow the owner to pick the winner", async function () {
     await expect(lottery.connect(addr1).pickWinner()).to.be.revertedWith(
@@ -93,14 +92,17 @@ describe("LotteryLink Contract", function () {
   });
 
   it("Should pick a winner and transfer the token balance", async function () {
-    const addr1InitialBalance = await linkToken.balanceOf(await addr1.getAddress());
-    const addr2InitialBalance = await linkToken.balanceOf(await addr2.getAddress());
+    const addr1InitialBalance = await linkToken.balanceOf(
+      await addr1.getAddress()
+    );
+    const addr2InitialBalance = await linkToken.balanceOf(
+      await addr2.getAddress()
+    );
 
     await lottery.connect(addr1).enter();
     await lottery.connect(addr2).enter();
-    const fundAmount = ethers.utils.parseUnits("100", 18); // 100 tokens
+    const fundAmount = ethers.utils.parseUnits("100", decimals); // 100 tokens
     await vrfCoordinatorMock.fundSubscription(subscriptionId, fundAmount);
-
 
     // Selecciona un ganador
     await lottery.connect(owner).pickWinner();
@@ -124,9 +126,8 @@ describe("LotteryLink Contract", function () {
     expect(
       addr1Balance.eq(addr1InitialBalance.sub(ticket)) || // addr1 ganó los 20 tokens
         addr2Balance.eq(addr2InitialBalance.sub(ticket)) // addr2 ganó los 20 tokens
-    ).to.be.true; 
+    ).to.be.true;
   });
-
 
   it("Should only allow the owner to pick the winner with enought subscription funds", async function () {
     await lottery.connect(addr1).enter();
@@ -135,15 +136,19 @@ describe("LotteryLink Contract", function () {
     await expect(lottery.connect(owner).pickWinner()).to.be.revertedWith(
       "Insufficient funds in the subscription"
     );
-
   });
-
 
   it("Only allow the owner to change the gas limit", async function () {
     // Selecciona un ganador
     await expect(lottery.connect(addr1).setGasLimit(90000)).to.be.revertedWith(
       "Only the manager can call this function"
     );
-
+  });
+  it("Only allow the owner to change the lottery ticket", async function () {
+    // Selecciona un ganador
+    const newTicket = ethers.utils.parseUnits("2", decimals);
+    await expect(
+      lottery.connect(addr1).setLotteryTicket(newTicket)
+    ).to.be.revertedWith("Only the manager can call this function");
   });
 });

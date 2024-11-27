@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
-
+// import "./interfaces/IAssetHandler.sol";
+import "./assetsmanagement/ETHHandler.sol";
 import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
 import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
@@ -9,21 +10,27 @@ import "hardhat/console.sol";
 error NotImplementedYet();
 
 contract Lottery is VRFConsumerBaseV2 {
-    address public manager;
-    address[] public players;
-
-    VRFCoordinatorV2Interface COORDINATOR;
-
     uint64 internal subscriptionId;
     bytes32 private keyHash;
+
+    VRFCoordinatorV2Interface COORDINATOR;
     uint32 private callbackGasLimit = 100000;
-    uint256 public constant lotteryTicket = 0.01 ether;
     uint16 private requestConfirmations = 3;
     uint32 private numWords = 1;
 
+    address public manager;
+    address[] public players;
+    uint256 public lotteryTicket = 0.01 ether;
     address public recentWinner;
 
-    event PlayerEntered(address indexed player);
+    IAssetHandler public assetHandler;
+
+
+    event PlayerEntered(address indexed player, uint256 amount);
+    event CallbackGasLimitUpdated(uint32 newGasLimit);
+    event LotteryTicketPriceUpdated(uint256 newPrice);
+    event WinnerPicked(address indexed winner);
+    event PrizeDistributed(address indexed winner, uint256 amount);
 
     constructor(
         uint64 _subscriptionId,
@@ -34,6 +41,7 @@ contract Lottery is VRFConsumerBaseV2 {
         subscriptionId = _subscriptionId;
         keyHash = _keyHash;
         COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
+        assetHandler = new ETHHandler();
     }
 
     modifier minPlayers() {
@@ -52,9 +60,19 @@ contract Lottery is VRFConsumerBaseV2 {
         _;
     }
 
-    function enter() public payable validTicket {
+    function setGasLimit(uint32 newGasLImit) external restricted {
+        callbackGasLimit = newGasLImit;
+        emit CallbackGasLimitUpdated(newGasLImit);
+    }
+
+    function setLotteryTicket(uint256 newPrice) external restricted {
+        lotteryTicket = newPrice;
+        emit LotteryTicketPriceUpdated(newPrice);
+    }
+
+    function enter() external payable validTicket {
         players.push(msg.sender);
-        emit PlayerEntered(msg.sender);
+        emit PlayerEntered(msg.sender, lotteryTicket);
     }
 
     function pickWinner() public virtual restricted minPlayers {
@@ -80,12 +98,20 @@ contract Lottery is VRFConsumerBaseV2 {
         address winner = players[randomIndex];
 
         recentWinner = winner;
+        emit WinnerPicked(winner);
         distributePrize(winner);
     }
 
     function distributePrize(address winner) internal virtual {
-        uint contractBalance = address(this).balance;
-        (bool success, ) = winner.call{value: contractBalance}("");
-        require(success, "Ether transaction failed");
+        uint prizeAmount = address(this).balance;
+        (bool success, ) = winner.call{value: prizeAmount}("");
+        require(success, "Ether transaction failed");        
+        // uint prizeAmount = assetHandler.getBalance();
+        // console.log("HEREEE2", prizeAmount);
+        // require(
+        //     assetHandler.transfer(winner, prizeAmount),
+        //     "Ether transaction failed"
+        // );
+        emit PrizeDistributed(winner, prizeAmount);
     }
 }
