@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Contract, ContractFactory, Signer } from "ethers";
+import { BigNumber } from "ethers"; // Asegúrate de esta importación
 
 describe("LotteryLink Contract", function () {
   let Lottery: ContractFactory;
@@ -59,22 +60,11 @@ describe("LotteryLink Contract", function () {
 
   it("Should allow players to enter the lottery", async function () {
     const addr1Address = await addr1.getAddress();
-
-    const amount = ethers.utils.parseUnits("10", 18);
-
-    await lottery.connect(addr1).enter(amount);
+    await lottery.connect(addr1).enter();
     const players: string[] = await lottery.getPlayers();
     expect(players).to.include(addr1Address);
   });
 
-  it("Should reject players who send less than 1 link", async function () {
-    const addr2Address = await addr2.getAddress();
-    const amount = ethers.utils.parseUnits("0.5", 18);
-
-    await expect(lottery.connect(addr2).enter(amount)).to.be.revertedWith(
-      "Minimum amount not met"
-    );
-  });
 
   it("Should only allow the owner to pick the winner", async function () {
     await expect(lottery.connect(addr1).pickWinner()).to.be.revertedWith(
@@ -83,12 +73,10 @@ describe("LotteryLink Contract", function () {
   });
 
   it("Should revert if there are not at least two players in the lottery", async function () {
-    const amount = ethers.utils.parseUnits("1", 18);
     await expect(lottery.connect(owner).pickWinner()).to.be.revertedWith(
       "No minimum players in the lottery"
     );
-
-    await lottery.connect(addr1).enter(amount);
+    await lottery.connect(addr1).enter();
 
     await expect(lottery.connect(owner).pickWinner()).to.be.revertedWith(
       "No minimum players in the lottery"
@@ -96,22 +84,23 @@ describe("LotteryLink Contract", function () {
   });
 
   it("The balance should increase after the player has entered", async function () {
-    const amount = ethers.utils.parseUnits("1", 18);
-
-    await lottery.connect(addr1).enter(amount);
-    await lottery.connect(addr2).enter(amount);
+    await lottery.connect(addr1).enter();
+    await lottery.connect(addr2).enter();
 
     const contractBalance = await linkToken.balanceOf(lottery.address);
-    expect(contractBalance).to.equal(ethers.utils.parseUnits("2", 18));
+    const ticket = await lottery.lotteryTicket();
+    expect(contractBalance).to.equal(ticket.mul(2));
   });
 
   it("Should pick a winner and transfer the token balance", async function () {
-    const amount = ethers.utils.parseUnits("10", 18); // 10 tokens
+    const addr1InitialBalance = await linkToken.balanceOf(await addr1.getAddress());
+    const addr2InitialBalance = await linkToken.balanceOf(await addr2.getAddress());
 
-    await lottery.connect(addr1).enter(amount);
-    await lottery.connect(addr2).enter(amount);
+    await lottery.connect(addr1).enter();
+    await lottery.connect(addr2).enter();
     const fundAmount = ethers.utils.parseUnits("100", 18); // 100 tokens
     await vrfCoordinatorMock.fundSubscription(subscriptionId, fundAmount);
+
 
     // Selecciona un ganador
     await lottery.connect(owner).pickWinner();
@@ -126,20 +115,22 @@ describe("LotteryLink Contract", function () {
     // Verifica que uno de los jugadores haya recibido los tokens
     const addr1Balance = await linkToken.balanceOf(await addr1.getAddress());
     const addr2Balance = await linkToken.balanceOf(await addr2.getAddress());
+    const ticket = await lottery.lotteryTicket();
+    expect(
+      addr1Balance.eq(addr1InitialBalance.add(ticket)) || // addr1 ganó los 20 tokens
+        addr2Balance.eq(addr2InitialBalance.add(ticket)) // addr2 ganó los 20 tokens
+    ).to.be.true;
 
     expect(
-      addr1Balance.gt(ethers.utils.parseUnits("19", 18)) || // addr1 ganó los 20 tokens
-        addr2Balance.gt(ethers.utils.parseUnits("19", 18)) // addr2 ganó los 20 tokens
-    ).to.be.true;
+      addr1Balance.eq(addr1InitialBalance.sub(ticket)) || // addr1 ganó los 20 tokens
+        addr2Balance.eq(addr2InitialBalance.sub(ticket)) // addr2 ganó los 20 tokens
+    ).to.be.true; 
   });
 
 
   it("Should only allow the owner to pick the winner with enought subscription funds", async function () {
-    const amount = ethers.utils.parseUnits("10", 18); // 10 tokens
-
-    await lottery.connect(addr1).enter(amount);
-    await lottery.connect(addr2).enter(amount);
-
+    await lottery.connect(addr1).enter();
+    await lottery.connect(addr2).enter();
     // Selecciona un ganador
     await expect(lottery.connect(owner).pickWinner()).to.be.revertedWith(
       "Insufficient funds in the subscription"

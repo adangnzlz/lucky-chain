@@ -1,55 +1,33 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
-import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-error NotImplementedYet();
-
+import "./Lottery.sol";
 import "hardhat/console.sol";
 
-contract LotteryLink is VRFConsumerBaseV2 {
-    address public manager;
-    address[] public players;
-
-    VRFCoordinatorV2Interface COORDINATOR;
-
-    uint64 private subscriptionId;
-    bytes32 private keyHash;
-    uint32 private callbackGasLimit = 100000;
-    uint16 private requestConfirmations = 3;
-    uint32 private numWords = 1;
-
-    address public recentWinner;
-
+contract LotteryLink is Lottery {
     IERC20 public token;
+    uint32 private callbackGasLimit = 100000;
 
     constructor(
         uint64 _subscriptionId,
         address _vrfCoordinator,
         bytes32 _keyHash,
         address _tokenAddress
-    ) VRFConsumerBaseV2(_vrfCoordinator) {
-        manager = msg.sender;
-        subscriptionId = _subscriptionId;
-        keyHash = _keyHash;
-        COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
-        token = IERC20(_tokenAddress);
+    )
+        Lottery(_subscriptionId, _vrfCoordinator, _keyHash) // Llama al constructor de Lottery
+    {
+        token = IERC20(_tokenAddress); // Inicializa el token ERC20
+        // lotteryTicket = 1 * 10 ** 18;
     }
-
-    function enter(uint256 amount) public {
-        require(amount >= 1 * 10 ** 18, "Minimum amount not met");
+ 
+    function enter() public payable override {
         require(
-            token.transferFrom(msg.sender, address(this), amount),
+            token.transferFrom(msg.sender, address(this), lotteryTicket),
             "Token transfer failed"
         );
-        players.push(msg.sender);
-    }
 
-    function getPlayers() public view returns (address[] memory) {
-        return players;
+        players.push(msg.sender);
     }
 
     function checkSubscriptionFunds()
@@ -65,16 +43,7 @@ contract LotteryLink is VRFConsumerBaseV2 {
         return COORDINATOR.getSubscription(subscriptionId);
     }
 
-    // callback Chainlink
-    function fulfillRandomWords(
-        uint256 /* requestId */,
-        uint256[] memory randomWords
-    ) internal override {
-        uint256 randomIndex = randomWords[0] % players.length;
-        address winner = players[randomIndex];
-
-        recentWinner = winner;
-
+    function distributePrize(address winner) internal override {
         uint256 contractBalance = token.balanceOf(address(this));
         require(
             token.transfer(winner, contractBalance),
@@ -82,35 +51,16 @@ contract LotteryLink is VRFConsumerBaseV2 {
         );
     }
 
-    function pickWinner() external restricted minPlayers {
+    function pickWinner() public override restricted minPlayers {
         (uint96 balance, , , ) = checkSubscriptionFunds();
         require(
             balance >= callbackGasLimit * tx.gasprice,
             "Insufficient funds in the subscription"
         );
-
-        COORDINATOR.requestRandomWords(
-            keyHash,
-            subscriptionId,
-            requestConfirmations,
-            callbackGasLimit, // Gas is not spent in the contract, it is spent in the chainlink subscription and you can limit it with this variable. The subscription uses LINK to calculate the randomness and to buy the gas needed to call the fulfillRandomWords callback at that time.
-            numWords
-        );
+        super.pickWinner();
     }
 
     function setGasLimit(uint32 newGasLImit) external restricted {
         callbackGasLimit = newGasLImit;
-    }
-
-    modifier minPlayers() {
-        require(players.length > 1, "No minimum players in the lottery");
-        _;
-    }
-    modifier restricted() {
-        require(
-            msg.sender == manager,
-            "Only the manager can call this function"
-        );
-        _;
     }
 }

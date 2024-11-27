@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
 import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import "hardhat/console.sol";
 
 error NotImplementedYet();
 
@@ -13,13 +14,16 @@ contract Lottery is VRFConsumerBaseV2 {
 
     VRFCoordinatorV2Interface COORDINATOR;
 
-    uint64 private subscriptionId;
+    uint64 internal subscriptionId;
     bytes32 private keyHash;
     uint32 private callbackGasLimit = 100000;
+    uint256 public constant lotteryTicket = 0.01 ether;
     uint16 private requestConfirmations = 3;
     uint32 private numWords = 1;
 
     address public recentWinner;
+
+    event PlayerEntered(address indexed player);
 
     constructor(
         uint64 _subscriptionId,
@@ -32,9 +36,10 @@ contract Lottery is VRFConsumerBaseV2 {
         COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
     }
 
-    function enter() public payable {
-        require(msg.value > .01 ether, "Minimum ether not met");
+    function enter() public payable virtual {
+        require(msg.value == lotteryTicket, "Incorrect ticket ammount");
         players.push(msg.sender);
+        emit PlayerEntered(msg.sender);
     }
 
     function getPlayers() public view returns (address[] memory) {
@@ -50,13 +55,16 @@ contract Lottery is VRFConsumerBaseV2 {
         address winner = players[randomIndex];
 
         recentWinner = winner;
+        distributePrize(winner);
+    }
 
+    function distributePrize(address winner) internal virtual {
         uint contractBalance = address(this).balance;
         (bool success, ) = winner.call{value: contractBalance}("");
         require(success, "Ether transaction failed");
     }
 
-    function pickWinner() public restricted minPlayers {
+    function pickWinner() public virtual restricted minPlayers {
         COORDINATOR.requestRandomWords(
             keyHash,
             subscriptionId,
