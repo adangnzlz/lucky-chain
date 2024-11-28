@@ -30,6 +30,7 @@ contract LotteryEther is VRFConsumerBaseV2 {
     event LotteryTicketPriceUpdated(uint256 newPrice);
     event WinnerPicked(address indexed winner);
     event PrizeDistributed(address indexed winner, uint256 amount);
+    event PrizeClaimed();
 
     constructor(
         uint64 _subscriptionId,
@@ -104,6 +105,7 @@ contract LotteryEther is VRFConsumerBaseV2 {
         pendingWithdrawals[msg.sender] = 0;
         recentWinner = address(0);
         transferWinner(msg.sender, prizeAmount);
+        emit PrizeClaimed();
     }
 
     // callback Chainlink
@@ -116,7 +118,6 @@ contract LotteryEther is VRFConsumerBaseV2 {
 
         recentWinner = winner;
         players = new address[](0);
-        emit WinnerPicked(winner);
         distributePrize(winner);
     }
 

@@ -3,42 +3,42 @@ import { ethers } from "hardhat";
 import { Contract, ContractFactory, Signer } from "ethers";
 import { assert } from "console";
 
+let Lottery: ContractFactory;
+let lottery: Contract;
+let vrfCoordinatorMock: Contract;
+let owner: Signer;
+let addr1: Signer;
+let addr2: Signer;
+let addr3: Signer;
+let ticketPrice: number;
+
+beforeEach(async function () {
+  Lottery = await ethers.getContractFactory("LotteryEther");
+  [owner, addr1, addr2, addr3] = await ethers.getSigners();
+
+  const VRFCoordinatorV2Mock = await ethers.getContractFactory(
+    "VRFCoordinatorV2Mock"
+  );
+  vrfCoordinatorMock = await VRFCoordinatorV2Mock.deploy(0, 0);
+  await vrfCoordinatorMock.deployed();
+  const tx = await vrfCoordinatorMock.createSubscription();
+  const receipt = await tx.wait();
+  const subscriptionId = receipt.events[0].args.subId;
+
+  const keyHash = ethers.constants.HashZero; // Hash dummy
+
+  lottery = await Lottery.deploy(
+    subscriptionId,
+    vrfCoordinatorMock.address,
+    keyHash,
+    false
+  );
+  await lottery.deployed();
+  await vrfCoordinatorMock.addConsumer(subscriptionId, lottery.address);
+  ticketPrice = await lottery.lotteryTicket();
+});
+
 describe("LotteryEther Contract", function () {
-  let Lottery: ContractFactory;
-  let lottery: Contract;
-  let vrfCoordinatorMock: Contract;
-  let owner: Signer;
-  let addr1: Signer;
-  let addr2: Signer;
-  let addr3: Signer;
-  let ticketPrice: number;
-
-  beforeEach(async function () {
-    Lottery = await ethers.getContractFactory("LotteryEther");
-    [owner, addr1, addr2, addr3] = await ethers.getSigners();
-
-    const VRFCoordinatorV2Mock = await ethers.getContractFactory(
-      "VRFCoordinatorV2Mock"
-    );
-    vrfCoordinatorMock = await VRFCoordinatorV2Mock.deploy(0, 0);
-    await vrfCoordinatorMock.deployed();
-    const tx = await vrfCoordinatorMock.createSubscription();
-    const receipt = await tx.wait();
-    const subscriptionId = receipt.events[0].args.subId;
-
-    const keyHash = ethers.constants.HashZero; // Hash dummy
-
-    lottery = await Lottery.deploy(
-      subscriptionId,
-      vrfCoordinatorMock.address,
-      keyHash,
-      false
-    );
-    await lottery.deployed();
-    await vrfCoordinatorMock.addConsumer(subscriptionId, lottery.address);
-    ticketPrice = await lottery.lotteryTicket();
-  });
-
   it("Direct transfers not allowed", async function () {
     await expect(
       addr1.sendTransaction({
@@ -233,8 +233,58 @@ describe("LotteryEther Contract", function () {
   });
 
   it("No winnings to withdraw pending to claim", async function () {
-    await expect(
-      lottery.connect(addr1).withdrawPrize()
-    ).to.be.revertedWith("No winnings to withdraw");
+    await expect(lottery.connect(addr1).withdrawPrize()).to.be.revertedWith(
+      "No winnings to withdraw"
+    );
+  });
+});
+
+describe("LotteryEther Events", function () {
+  it("should emit CallbackGasLimitUpdated when gas limit is updated", async function () {
+    const newGasLimit = 500000;
+    const tx = await lottery.connect(owner).setGasLimit(newGasLimit);
+
+    await expect(tx)
+      .to.emit(lottery, "CallbackGasLimitUpdated")
+      .withArgs(newGasLimit);
+  });
+
+  it("should emit LotteryTicketPriceUpdated when ticket is updated", async function () {
+    const newPrice = ethers.utils.parseEther("0.02");
+    const tx = await lottery.connect(owner).setLotteryTicket(newPrice);
+    await expect(tx)
+      .to.emit(lottery, "LotteryTicketPriceUpdated")
+      .withArgs(newPrice);
+  });
+
+  it("should emit PlayerEntered when a player joins the lottery", async function () {
+    const addr1Address = await addr1.getAddress();
+    const tx = await lottery.connect(addr1).enter({ value: ticketPrice });
+
+    await expect(tx)
+      .to.emit(lottery, "PlayerEntered")
+      .withArgs(addr1Address, ticketPrice);
+  });
+
+  it("should emit PrizeDistributed when prize is distributed", async function () {
+    const addr1Address = await addr1.getAddress();
+    await lottery.connect(addr1).enter({ value: ticketPrice });
+    await lottery.connect(addr2).enter({ value: ticketPrice });
+    await lottery.connect(owner).pickWinner();
+    const tx = await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+    const winner = await lottery.recentWinner();
+    await expect(tx)
+      .to.emit(lottery, "PrizeDistributed")
+      .withArgs(winner, ticketPrice.mul(2));
+
+    let winnerAddr;
+    if (addr1Address == winner) {
+      winnerAddr = addr1;
+    } else {
+      winnerAddr = addr2;
+    }
+    const tx2 = await lottery.connect(winnerAddr).withdrawPrize();
+    await expect(tx2)
+      .to.emit(lottery, "PrizeClaimed")
   });
 });

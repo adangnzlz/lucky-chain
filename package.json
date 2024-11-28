@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "node": "npx hardhat node",
-    "node-compile": "npx hardhat node & npm run watch:compile",
-    "node-compile-test": "npx hardhat node & npm run watch:compile & npm run watch:test",
+    "node": "npx hardhat compile & npx hardhat node",
+    "node-watch": "npx hardhat compile & npx hardhat node & npm run watch:compile",
+    "node-watch-test": "npx hardhat node & npm run watch:compile & npm run watch:test",
     "test": "npx hardhat test",
     "compile": "npx hardhat compile",
     "coverage": "npx hardhat coverage",
