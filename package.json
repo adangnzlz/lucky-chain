@@ -6,7 +6,7 @@
     "test": "npx hardhat test",
     "compile": "npx hardhat compile",
     "coverage": "npx hardhat coverage",
-    "deploy-hardhat": "npx hardhat run scripts/deploy-hardhat.ts",
+    "deploy-hardhat": "npx hardhat run scripts/deploy-hardhat.ts --network localhost",
     "deploy-sepolia": "npx hardhat run scripts/deploy-sepolia.ts --network sepolia",
     "watch:compile": "chokidar 'contracts/**/*.sol' -c 'npx hardhat compile'",
     "watch:test": "chokidar 'contracts/**/*.sol' 'test/**/*.js' -c 'npx hardhat test'"
