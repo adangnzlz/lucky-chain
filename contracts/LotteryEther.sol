@@ -7,18 +7,20 @@ import "hardhat/console.sol";
 
 error NotImplementedYet();
 
-contract Lottery is VRFConsumerBaseV2 {
+contract LotteryEther is VRFConsumerBaseV2 {
     uint64 internal subscriptionId;
     bytes32 private keyHash;
+    bool private isERC20;
 
     VRFCoordinatorV2Interface COORDINATOR;
-    uint32 private callbackGasLimit = 100000;
+    uint32 public callbackGasLimit = 100000;
     uint16 private requestConfirmations = 3;
     uint32 private numWords = 1;
 
     address public manager;
     address[] public players;
     uint256 public lotteryTicket = 0.01 ether;
+    uint256 public totalPlayerFunds = 0;
     address public recentWinner;
 
     mapping(address => uint256) public pendingWithdrawals;
@@ -32,14 +34,24 @@ contract Lottery is VRFConsumerBaseV2 {
     constructor(
         uint64 _subscriptionId,
         address _vrfCoordinator,
-        bytes32 _keyHash
+        bytes32 _keyHash,
+        bool _isERC20
     ) VRFConsumerBaseV2(_vrfCoordinator) {
         manager = msg.sender;
         subscriptionId = _subscriptionId;
         keyHash = _keyHash;
         COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
+        isERC20 = _isERC20;
     }
 
+    receive() external payable {
+        revert("Direct transfers not allowed");
+    }
+
+    modifier lotteryOpen() {
+        require(recentWinner == address(0), "Winner pending to collect prize");
+        _;
+    }
     modifier minPlayers() {
         require(players.length > 1, "No minimum players in the lottery");
         _;
@@ -53,7 +65,12 @@ contract Lottery is VRFConsumerBaseV2 {
     }
     modifier validTicket() virtual {
         require(msg.value == lotteryTicket, "Incorrect ticket ammount");
+        totalPlayerFunds += msg.value;
         _;
+    }
+
+    function getPlayers() public view returns (address[] memory) {
+        return players;
     }
 
     function setGasLimit(uint32 newGasLImit) external restricted {
@@ -66,7 +83,7 @@ contract Lottery is VRFConsumerBaseV2 {
         emit LotteryTicketPriceUpdated(newPrice);
     }
 
-    function enter() external payable validTicket {
+    function enter() external payable validTicket lotteryOpen {
         players.push(msg.sender);
         emit PlayerEntered(msg.sender, lotteryTicket);
     }
@@ -81,8 +98,12 @@ contract Lottery is VRFConsumerBaseV2 {
         );
     }
 
-    function getPlayers() public view returns (address[] memory) {
-        return players;
+    function withdrawPrize() external {
+        uint256 prizeAmount = pendingWithdrawals[msg.sender];
+        require(prizeAmount > 0, "No winnings to withdraw");
+        pendingWithdrawals[msg.sender] = 0;
+        recentWinner = address(0);
+        transferWinner(msg.sender, prizeAmount);
     }
 
     // callback Chainlink
@@ -94,21 +115,20 @@ contract Lottery is VRFConsumerBaseV2 {
         address winner = players[randomIndex];
 
         recentWinner = winner;
+        players = new address[](0);
         emit WinnerPicked(winner);
         distributePrize(winner);
     }
 
-    function distributePrize(address winner) internal virtual {
-        uint prizeAmount = address(this).balance;
-        pendingWithdrawals[winner] = prizeAmount;
+    function distributePrize(address winner) private {
+        uint256 prizeAmount = totalPlayerFunds;
+        pendingWithdrawals[winner] += prizeAmount;
+        totalPlayerFunds = 0;
         emit PrizeDistributed(winner, prizeAmount);
     }
 
-    function withdrawPrize() external virtual {
-        uint256 prizeAmount = pendingWithdrawals[msg.sender];
-        require(prizeAmount > 0, "No winnings to withdraw");
-        pendingWithdrawals[msg.sender] = 0;
-        (bool success, ) = msg.sender.call{value: prizeAmount}("");
+    function transferWinner(address to, uint256 amount) internal virtual {
+        (bool success, ) = to.call{value: amount}("");
         require(success, "Ether transaction failed");
     }
 }
