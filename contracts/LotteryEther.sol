@@ -49,7 +49,7 @@ contract LotteryEther is VRFConsumerBaseV2 {
     }
 
     modifier lotteryOpen() {
-        require(recentWinner == address(0), "Winner pending to collect prize");
+        require(recentWinner == address(0), "Last winner pending to collect prize");
         _;
     }
     modifier minPlayers() {

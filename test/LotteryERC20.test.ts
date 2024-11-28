@@ -78,7 +78,7 @@ describe("LotterERC20 Contract", function () {
     );
   });
 
-  it("Should only allow the owner to pick the winner with enought subscription funds", async function () {
+  it("Should only allow the owner to pick the winner if enought subscription funds", async function () {
     await lottery.connect(addr1).enter();
     await lottery.connect(addr2).enter();
     // Selecciona un ganador

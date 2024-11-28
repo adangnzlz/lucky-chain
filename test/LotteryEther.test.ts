@@ -216,7 +216,7 @@ describe("LotteryEther Contract", function () {
 
     await expect(
       lottery.connect(addr3).enter({ value: ticketPrice })
-    ).to.be.revertedWith("Winner pending to collect prize");
+    ).to.be.revertedWith("Last winner pending to collect prize");
 
     const winner = await lottery.recentWinner();
     let winnerAddr;
@@ -230,5 +230,11 @@ describe("LotteryEther Contract", function () {
     await lottery.connect(addr3).enter({ value: ticketPrice });
 
     expect(1).to.be.eq((await lottery.getPlayers()).length);
+  });
+
+  it("No winnings to withdraw pending to claim", async function () {
+    await expect(
+      lottery.connect(addr1).withdrawPrize()
+    ).to.be.revertedWith("No winnings to withdraw");
   });
 });
