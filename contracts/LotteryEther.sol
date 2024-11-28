@@ -80,6 +80,7 @@ contract LotteryEther is VRFConsumerBaseV2 {
     }
 
     function setLotteryTicket(uint256 newPrice) external restricted {
+        require(newPrice > 0, "The ticket price must be a positive amount.");
         lotteryTicket = newPrice;
         emit LotteryTicketPriceUpdated(newPrice);
     }

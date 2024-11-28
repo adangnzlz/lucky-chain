@@ -1,0 +1,4 @@
+testMode: property
+duration: 30  # Duración en segundos
+# https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/configuration.md
+# echidna . --contract LotteryEtherEchidna --config ./echidna.yaml
