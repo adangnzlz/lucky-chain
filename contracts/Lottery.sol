@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
-// import "./interfaces/IAssetHandler.sol";
-import "./assetsmanagement/ETHHandler.sol";
 import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
 import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
@@ -23,8 +21,7 @@ contract Lottery is VRFConsumerBaseV2 {
     uint256 public lotteryTicket = 0.01 ether;
     address public recentWinner;
 
-    IAssetHandler public assetHandler;
-
+    mapping(address => uint256) public pendingWithdrawals;
 
     event PlayerEntered(address indexed player, uint256 amount);
     event CallbackGasLimitUpdated(uint32 newGasLimit);
@@ -41,7 +38,6 @@ contract Lottery is VRFConsumerBaseV2 {
         subscriptionId = _subscriptionId;
         keyHash = _keyHash;
         COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
-        assetHandler = new ETHHandler();
     }
 
     modifier minPlayers() {
@@ -104,14 +100,15 @@ contract Lottery is VRFConsumerBaseV2 {
 
     function distributePrize(address winner) internal virtual {
         uint prizeAmount = address(this).balance;
-        (bool success, ) = winner.call{value: prizeAmount}("");
-        require(success, "Ether transaction failed");        
-        // uint prizeAmount = assetHandler.getBalance();
-        // console.log("HEREEE2", prizeAmount);
-        // require(
-        //     assetHandler.transfer(winner, prizeAmount),
-        //     "Ether transaction failed"
-        // );
+        pendingWithdrawals[winner] = prizeAmount;
         emit PrizeDistributed(winner, prizeAmount);
+    }
+
+    function withdrawPrize() external virtual {
+        uint256 prizeAmount = pendingWithdrawals[msg.sender];
+        require(prizeAmount > 0, "No winnings to withdraw");
+        pendingWithdrawals[msg.sender] = 0;
+        (bool success, ) = msg.sender.call{value: prizeAmount}("");
+        require(success, "Ether transaction failed");
     }
 }

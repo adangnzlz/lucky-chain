@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// import "./assetsmanagement/ERC20Handler.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./Lottery.sol";
@@ -20,7 +19,6 @@ contract LotteryLink is Lottery {
     ) Lottery(_subscriptionId, _vrfCoordinator, _keyHash) {
         token = IERC20(_tokenAddress);
         lotteryTicket = defaultLotteryTicket * 10 ** getDecimals(_tokenAddress);
-        // assetHandler = new ERC20Handler(_tokenAddress);
     }
 
     modifier validTicket() override {
@@ -28,10 +26,6 @@ contract LotteryLink is Lottery {
             token.transferFrom(msg.sender, address(this), lotteryTicket),
             "Token transfer failed"
         );
-        // require(
-        //     assetHandler.transfer(address(this), lotteryTicket),
-        //     "Ticket purchase failed"
-        // );
         _;
     }
 
@@ -45,9 +39,17 @@ contract LotteryLink is Lottery {
     }
 
     function distributePrize(address winner) internal override {
-        uint256 contractBalance = token.balanceOf(address(this));
+        uint256 prizeAmount = token.balanceOf(address(this));
+        pendingWithdrawals[winner] = prizeAmount;
+        emit PrizeDistributed(winner, prizeAmount);
+    }
+
+    function withdrawPrize() external override {
+        uint256 prizeAmount = pendingWithdrawals[msg.sender];
+        require(prizeAmount > 0, "No winnings to withdraw");
+        pendingWithdrawals[msg.sender] = 0; // Evita reentrancy
         require(
-            token.transfer(winner, contractBalance),
+            token.transfer(msg.sender, prizeAmount),
             "Token transfer failed"
         );
     }
@@ -56,7 +58,7 @@ contract LotteryLink is Lottery {
         try IERC20Metadata(_token).decimals() returns (uint8 value) {
             return value;
         } catch {
-            return 18; // valor por defecto
+            return 18;
         }
     }
 }

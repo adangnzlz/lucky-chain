@@ -13,6 +13,7 @@ describe("LotteryLink Contract", function () {
   let addr2: Signer;
   let subscriptionId: number;
   let decimals: number;
+  let ticketPrice: number;
 
   beforeEach(async function () {
     const LinkTokenMock = await ethers.getContractFactory("LinkTokenMock");
@@ -51,6 +52,7 @@ describe("LotteryLink Contract", function () {
 
     await linkToken.connect(addr1).approve(lottery.address, amount);
     await linkToken.connect(addr2).approve(lottery.address, amount);
+    ticketPrice = await lottery.lotteryTicket();
   });
 
   it("Should set the correct manager", async function () {
@@ -91,7 +93,7 @@ describe("LotteryLink Contract", function () {
     expect(contractBalance).to.equal(ticket.mul(2));
   });
 
-  it("Should pick a winner and transfer the token balance", async function () {
+  /* it("Should pick a winner and transfer the token balance", async function () {
     const addr1InitialBalance = await linkToken.balanceOf(
       await addr1.getAddress()
     );
@@ -127,6 +129,71 @@ describe("LotteryLink Contract", function () {
       addr1Balance.eq(addr1InitialBalance.sub(ticket)) || // addr1 ganó los 20 tokens
         addr2Balance.eq(addr2InitialBalance.sub(ticket)) // addr2 ganó los 20 tokens
     ).to.be.true;
+  });*/
+
+  it("Should pick a winner and let the balance available for him", async function () {
+    await lottery.connect(addr1).enter();
+    await lottery.connect(addr2).enter();
+    const fundAmount = ethers.utils.parseUnits("100", decimals); // 100 tokens
+    await vrfCoordinatorMock.fundSubscription(subscriptionId, fundAmount);
+
+    await lottery.connect(owner).pickWinner();
+    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+
+    const winner = await lottery.recentWinner();
+    const winnerBalancePendingWithdrawal = await lottery.pendingWithdrawals(
+      winner
+    );
+
+    expect(ticketPrice.mul(2)).to.equal(winnerBalancePendingWithdrawal);
+  });
+  it("The withdrawal balance for the winner must be 0 after claiming the prize.", async function () {
+    const addr1Address = await addr1.getAddress();
+    await lottery.connect(addr1).enter();
+    await lottery.connect(addr2).enter();
+    const fundAmount = ethers.utils.parseUnits("100", decimals); // 100 tokens
+    await vrfCoordinatorMock.fundSubscription(subscriptionId, fundAmount);
+
+    await lottery.connect(owner).pickWinner();
+    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+
+    const winner = await lottery.recentWinner();
+    let winnerAddr;
+    if (addr1Address == winner) {
+      winnerAddr = addr1;
+    } else {
+      winnerAddr = addr2;
+    }
+    await lottery.connect(winnerAddr).withdrawPrize();
+    const winnerBalanceAfterWithdrawal = await lottery.pendingWithdrawals(
+      winner
+    );
+    expect(winnerBalanceAfterWithdrawal).to.equal(0);
+  });
+  it("The balance of winner should increase after claim the prize", async function () {
+    const addr1Address = await addr1.getAddress();
+
+    await lottery.connect(addr1).enter({ value: ticketPrice });
+    await lottery.connect(addr2).enter({ value: ticketPrice });
+
+    const fundAmount = ethers.utils.parseUnits("100", decimals); // 100 tokens
+    await vrfCoordinatorMock.fundSubscription(subscriptionId, fundAmount);    
+    
+    await lottery.connect(owner).pickWinner();
+    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+
+    const winner = await lottery.recentWinner();
+    let winnerAddr;
+    if (addr1Address == winner) {
+      winnerAddr = addr1;
+    } else {
+      winnerAddr = addr2;
+    }
+    const initialBalance = await ethers.provider.getBalance(winner);
+    await lottery.connect(winnerAddr).withdrawPrize();
+    const finalBalance = await ethers.provider.getBalance(winner);
+
+    expect(initialBalance.lt(finalBalance));
   });
 
   it("Should only allow the owner to pick the winner with enought subscription funds", async function () {

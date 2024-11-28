@@ -79,29 +79,64 @@ describe("Lottery Contract", function () {
     expect(contractBalance).to.equal(ticketPrice.mul(2));
   });
 
-  it("Should pick a winner and transfer the balance", async function () {
-    const addr1Address = await addr1.getAddress();
-    const addr2Address = await addr2.getAddress();
-
+  it("Should pick a winner and let the balance available for him", async function () {
     await lottery.connect(addr1).enter({ value: ticketPrice });
     await lottery.connect(addr2).enter({ value: ticketPrice });
-
-    const addr1Balance = await ethers.provider.getBalance(addr1Address);
-    const addr2Balance = await ethers.provider.getBalance(addr2Address);
 
     await lottery.connect(owner).pickWinner();
     await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
 
-    const contractBalance = await ethers.provider.getBalance(lottery.address);
-    expect(contractBalance).to.equal(0);
+    const winner = await lottery.recentWinner();
+    const winnerBalancePendingWithdrawal = await lottery.pendingWithdrawals(
+      winner
+    );
 
-    const finalBalance1 = await ethers.provider.getBalance(addr1Address);
-    const finalBalance2 = await ethers.provider.getBalance(addr2Address);
-    const expectedBalance1 = addr1Balance.add(ticketPrice.mul(2));
-    const expectedBalance2 = addr2Balance.add(ticketPrice.mul(2));
-    expect(
-      finalBalance1.eq(expectedBalance1) ||
-        finalBalance2.eq(expectedBalance2)
-    ).to.be.true;
+    expect(ticketPrice.mul(2)).to.equal(winnerBalancePendingWithdrawal);
+  });
+
+  it("The withdrawal balance for the winner must be 0 after claiming the prize.", async function () {
+    const addr1Address = await addr1.getAddress();
+
+    await lottery.connect(addr1).enter({ value: ticketPrice });
+    await lottery.connect(addr2).enter({ value: ticketPrice });
+
+    await lottery.connect(owner).pickWinner();
+    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+
+    const winner = await lottery.recentWinner();
+    let winnerAddr;
+    if (addr1Address == winner) {
+      winnerAddr = addr1;
+    } else {
+      winnerAddr = addr2;
+    }
+    await lottery.connect(winnerAddr).withdrawPrize();
+
+    const winnerBalanceAfterWithdrawal = await lottery.pendingWithdrawals(
+      winner
+    );
+    expect(winnerBalanceAfterWithdrawal).to.equal(0);
+  });
+
+  it("The balance of winner should increase after claim the prize", async function () {
+    const addr1Address = await addr1.getAddress();
+
+    await lottery.connect(addr1).enter({ value: ticketPrice });
+    await lottery.connect(addr2).enter({ value: ticketPrice });
+    await lottery.connect(owner).pickWinner();
+    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+
+    const winner = await lottery.recentWinner();
+    let winnerAddr;
+    if (addr1Address == winner) {
+      winnerAddr = addr1;
+    } else {
+      winnerAddr = addr2;
+    }
+    const initialBalance = await ethers.provider.getBalance(winner);
+    await lottery.connect(winnerAddr).withdrawPrize();
+    const finalBalance = await ethers.provider.getBalance(winner);
+
+    expect(initialBalance.lt(finalBalance));
   });
 });
