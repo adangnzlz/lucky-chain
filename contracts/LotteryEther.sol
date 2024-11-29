@@ -20,6 +20,8 @@ contract LotteryEther is VRFConsumerBaseV2 {
     address public manager;
     address[] public players;
     uint256 public lotteryTicket = 0.01 ether;
+    uint256 public maxTotalFunds = 1000 ether;
+
     uint256 public totalPlayerFunds = 0;
     address public recentWinner;
 
@@ -50,7 +52,10 @@ contract LotteryEther is VRFConsumerBaseV2 {
     }
 
     modifier lotteryOpen() {
-        require(recentWinner == address(0), "Last winner pending to collect prize");
+        require(
+            recentWinner == address(0),
+            "Last winner pending to collect prize"
+        );
         _;
     }
     modifier minPlayers() {
@@ -65,8 +70,13 @@ contract LotteryEther is VRFConsumerBaseV2 {
         _;
     }
     modifier validTicket() virtual {
+        require(
+            totalPlayerFunds + msg.value <= maxTotalFunds,
+            "Exceeds maximum allowed funds"
+        );
         require(msg.value == lotteryTicket, "Incorrect ticket ammount");
         totalPlayerFunds += msg.value;
+        assert(totalPlayerFunds >= 0);
         _;
     }
 
@@ -107,6 +117,7 @@ contract LotteryEther is VRFConsumerBaseV2 {
         recentWinner = address(0);
         transferWinner(msg.sender, prizeAmount);
         emit PrizeClaimed();
+        assert(pendingWithdrawals[msg.sender] == 0);
     }
 
     // callback Chainlink
@@ -131,6 +142,6 @@ contract LotteryEther is VRFConsumerBaseV2 {
 
     function transferWinner(address to, uint256 amount) internal virtual {
         (bool success, ) = to.call{value: amount}("");
-        require(success, "Ether transaction failed");
+        assert(success);
     }
 }

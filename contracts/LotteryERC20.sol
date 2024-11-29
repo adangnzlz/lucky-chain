@@ -21,6 +21,10 @@ contract LotteryERC20 is LotteryEther {
     }
 
     modifier validTicket() override {
+        require(
+            totalPlayerFunds + lotteryTicket <= maxTotalFunds,
+            "Exceeds maximum allowed funds"
+        );
         try
             token.transferFrom(msg.sender, address(this), lotteryTicket)
         returns (bool success) {

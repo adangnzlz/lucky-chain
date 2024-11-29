@@ -14,15 +14,6 @@ contract LotteryEtherEchidna is LotteryEther {
         )
     {}
 
-    // Propiedades para Echidna
-    function echidna_only_owner_can_change_ticket_price()
-        public
-        view
-        returns (bool)
-    {
-        return msg.sender != manager;
-    }
-
     function echidna_ticket_price_positive() public view returns (bool) {
         return lotteryTicket > 0;
     }
@@ -32,11 +23,14 @@ contract LotteryEtherEchidna is LotteryEther {
         view
         returns (bool)
     {
-        return totalPlayerFunds <= type(uint256).max;
+        return totalPlayerFunds <= maxTotalFunds;
     }
 
     function echidna_no_winner_without_players() public view returns (bool) {
-        return getPlayers().length > 0 || recentWinner == address(0);
+        return players.length > 0 || recentWinner == address(0);
     }
 
+    function echidna_manager_initialized() public view returns (bool) {
+        return manager != address(0);
+    }
 }
