@@ -234,7 +234,7 @@ describe("LotteryEther Contract", function () {
 
   it("No winnings to withdraw pending to claim", async function () {
     await expect(lottery.connect(addr1).withdrawPrize()).to.be.revertedWith(
-      "No winnings to withdraw"
+      "Invalid amount"
     );
   });
 });
@@ -270,10 +270,13 @@ describe("LotteryEther Events", function () {
     const addr1Address = await addr1.getAddress();
     await lottery.connect(addr1).enter({ value: ticketPrice });
     await lottery.connect(addr2).enter({ value: ticketPrice });
-    await lottery.connect(owner).pickWinner();
-    const tx = await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
-    const winner = await lottery.recentWinner();
+    const tx = await lottery.connect(owner).pickWinner();
     await expect(tx)
+    .to.emit(lottery, "RandomWordsRequested");
+
+    const tx1 = await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+    const winner = await lottery.recentWinner();
+    await expect(tx1)
       .to.emit(lottery, "PrizeDistributed")
       .withArgs(winner, ticketPrice.mul(2));
 
@@ -284,7 +287,6 @@ describe("LotteryEther Events", function () {
       winnerAddr = addr2;
     }
     const tx2 = await lottery.connect(winnerAddr).withdrawPrize();
-    await expect(tx2)
-      .to.emit(lottery, "PrizeClaimed")
+    await expect(tx2).to.emit(lottery, "PrizeClaimed");
   });
 });

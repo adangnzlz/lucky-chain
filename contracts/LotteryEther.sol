@@ -31,6 +31,7 @@ contract LotteryEther is VRFConsumerBaseV2 {
     event CallbackGasLimitUpdated(uint32 newGasLimit);
     event LotteryTicketPriceUpdated(uint256 newPrice);
     event WinnerPicked(address indexed winner);
+    event RandomWordsRequested(uint256 requestId);
     event PrizeDistributed(address indexed winner, uint256 amount);
     event PrizeClaimed();
 
@@ -101,23 +102,22 @@ contract LotteryEther is VRFConsumerBaseV2 {
     }
 
     function pickWinner() public virtual restricted minPlayers {
-        COORDINATOR.requestRandomWords(
+        uint256 requestId = COORDINATOR.requestRandomWords(
             keyHash,
             subscriptionId,
             requestConfirmations,
             callbackGasLimit,
             numWords
         );
+        emit RandomWordsRequested(requestId);
     }
 
     function withdrawPrize() external {
         uint256 prizeAmount = pendingWithdrawals[msg.sender];
-        require(prizeAmount > 0, "No winnings to withdraw");
         pendingWithdrawals[msg.sender] = 0;
         recentWinner = address(0);
-        transferWinner(msg.sender, prizeAmount);
         emit PrizeClaimed();
-        assert(pendingWithdrawals[msg.sender] == 0);
+        transferWinner(msg.sender, prizeAmount);
     }
 
     // callback Chainlink
@@ -141,7 +141,10 @@ contract LotteryEther is VRFConsumerBaseV2 {
     }
 
     function transferWinner(address to, uint256 amount) internal virtual {
+        require(to != address(0), "Invalid address"); // Validar dirección
+        require(amount > 0, "Invalid amount"); // Validar monto
+
         (bool success, ) = to.call{value: amount}("");
-        assert(success);
+        require(success, "Transfer failed");
     }
 }

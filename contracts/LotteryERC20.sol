@@ -10,6 +10,13 @@ contract LotteryERC20 is LotteryEther {
     IERC20 public token;
     uint256 private defaultLotteryTicket = 1;
 
+    event SubscriptionInfoRequested(
+        uint96 balance,
+        uint64 reqCount,
+        address owner,
+        address[] consumers
+    );
+
     constructor(
         uint64 _subscriptionId,
         address _vrfCoordinator,
@@ -25,11 +32,11 @@ contract LotteryERC20 is LotteryEther {
             totalPlayerFunds + lotteryTicket <= maxTotalFunds,
             "Exceeds maximum allowed funds"
         );
+        totalPlayerFunds += lotteryTicket;
         try
             token.transferFrom(msg.sender, address(this), lotteryTicket)
         returns (bool success) {
             require(success, "Token transfer failed");
-            totalPlayerFunds += lotteryTicket;
             _;
         } catch {
             revert("Token transfer failed");
@@ -37,11 +44,17 @@ contract LotteryERC20 is LotteryEther {
     }
 
     function pickWinner() public override restricted minPlayers {
-        (uint96 balance, , , ) = COORDINATOR.getSubscription(subscriptionId);
+        (
+            uint96 balance,
+            uint64 reqCount,
+            address owner,
+            address[] memory consumers
+        ) = COORDINATOR.getSubscription(subscriptionId);
         require(
             balance >= callbackGasLimit * tx.gasprice,
             "Insufficient funds in the subscription"
         );
+        emit SubscriptionInfoRequested(balance, reqCount, owner, consumers);
         super.pickWinner();
     }
 
