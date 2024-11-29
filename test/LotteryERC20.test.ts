@@ -74,7 +74,7 @@ describe("LotterERC20 Contract", function () {
 
   it("Should only allow the owner to pick the winner", async function () {
     await expect(lottery.connect(addr1).pickWinner()).to.be.revertedWith(
-      "Only the manager can call this function"
+      "OwnableUnauthorizedAccount"
     );
   });
 

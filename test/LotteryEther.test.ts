@@ -51,7 +51,7 @@ describe("LotteryEther Contract", function () {
   it("Only allow the owner to change the gas limit", async function () {
     // Selecciona un ganador
     await expect(lottery.connect(addr1).setGasLimit(90000)).to.be.revertedWith(
-      "Only the manager can call this function"
+      "OwnableUnauthorizedAccount"
     );
 
     await lottery.connect(owner).setGasLimit(230000);
@@ -62,7 +62,7 @@ describe("LotteryEther Contract", function () {
     const newPrice = ethers.utils.parseEther("0.02");
     await expect(
       lottery.connect(addr1).setLotteryTicket(newPrice)
-    ).to.be.revertedWith("Only the manager can call this function");
+    ).to.be.revertedWith("OwnableUnauthorizedAccount");
 
     await lottery.connect(owner).setLotteryTicket(newPrice);
 
@@ -98,7 +98,7 @@ describe("LotteryEther Contract", function () {
 
   it("Should only allow the owner to pick the winner", async function () {
     await expect(lottery.connect(addr1).pickWinner()).to.be.revertedWith(
-      "Only the manager can call this function"
+      "OwnableUnauthorizedAccount"
     );
   });
 

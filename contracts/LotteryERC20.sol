@@ -43,7 +43,7 @@ contract LotteryERC20 is LotteryEther {
         }
     }
 
-    function pickWinner() public override restricted minPlayers {
+    function pickWinner() public override onlyOwner minPlayers {
         (
             uint96 balance,
             uint64 reqCount,

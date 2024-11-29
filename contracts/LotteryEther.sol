@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
 import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
@@ -7,7 +8,7 @@ import "hardhat/console.sol";
 
 error NotImplementedYet();
 
-contract LotteryEther is VRFConsumerBaseV2 {
+contract LotteryEther is VRFConsumerBaseV2, Ownable {
     uint64 internal subscriptionId;
     bytes32 private keyHash;
     bool private isERC20;
@@ -40,7 +41,7 @@ contract LotteryEther is VRFConsumerBaseV2 {
         address _vrfCoordinator,
         bytes32 _keyHash,
         bool _isERC20
-    ) VRFConsumerBaseV2(_vrfCoordinator) {
+    ) VRFConsumerBaseV2(_vrfCoordinator) Ownable(msg.sender) {
         manager = msg.sender;
         subscriptionId = _subscriptionId;
         keyHash = _keyHash;
@@ -63,13 +64,7 @@ contract LotteryEther is VRFConsumerBaseV2 {
         require(players.length > 1, "No minimum players in the lottery");
         _;
     }
-    modifier restricted() {
-        require(
-            msg.sender == manager,
-            "Only the manager can call this function"
-        );
-        _;
-    }
+
     modifier validTicket() virtual {
         require(
             totalPlayerFunds + msg.value <= maxTotalFunds,
@@ -85,12 +80,12 @@ contract LotteryEther is VRFConsumerBaseV2 {
         return players;
     }
 
-    function setGasLimit(uint32 newGasLImit) external restricted {
+    function setGasLimit(uint32 newGasLImit) external onlyOwner {
         callbackGasLimit = newGasLImit;
         emit CallbackGasLimitUpdated(newGasLImit);
     }
 
-    function setLotteryTicket(uint256 newPrice) external restricted {
+    function setLotteryTicket(uint256 newPrice) external onlyOwner {
         require(newPrice > 0, "The ticket price must be a positive amount.");
         lotteryTicket = newPrice;
         emit LotteryTicketPriceUpdated(newPrice);
@@ -101,7 +96,7 @@ contract LotteryEther is VRFConsumerBaseV2 {
         emit PlayerEntered(msg.sender, lotteryTicket);
     }
 
-    function pickWinner() public virtual restricted minPlayers {
+    function pickWinner() public virtual onlyOwner minPlayers {
         uint256 requestId = COORDINATOR.requestRandomWords(
             keyHash,
             subscriptionId,
