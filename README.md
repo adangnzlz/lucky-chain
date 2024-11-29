@@ -1,6 +1,6 @@
 # Lucky Chain 🎲
 
-**Lucky Chain** es una lotería descentralizada construida sobre Ethereum, que utiliza contratos inteligentes y Chainlink VRF para garantizar la transparencia y la aleatoriedad en la selección de ganadores. Los participantes pueden unirse enviando una pequeña cantidad de ETH, y el contrato seleccionará al azar a un ganador que recibirá todos los fondos acumulados.
+**Lucky Chain** es una lotería descentralizada construida sobre Ethereum que admite tanto ser ejecutada con el token nativo como con un token ERC20, que utiliza contratos inteligentes y Chainlink VRF para garantizar la transparencia y la aleatoriedad en la selección de ganadores. Los participantes pueden unirse enviando una pequeña cantidad de ETH, y el contrato seleccionará al azar a un ganador que recibirá todos los fondos acumulados.
 
 ## Tabla de Contenidos
 
@@ -34,6 +34,7 @@
 - **Chainlink VRF**: Protocolo de aleatoriedad verificable para asegurar la imparcialidad en la elección del ganador.
 - **RabbyWallet**: Billetera de Ethereum utilizada por los participantes para interactuar con la lotería.
 - **Echidna**: Echidna is a fuzzing tool for smart contracts with input generation based on the contract’s ABI (Application Binary Interface). In other words, Echidna generates several random transaction sequences from a smart contract’s ABI and then assesses all of them.
+- **Slither**: Para detección de malas prácticas en el código
 
 ---
 
@@ -62,13 +63,20 @@ Para ejecutar este proyecto localmente, sigue estos pasos:
    npm install --save-dev hardhat @nomiclabs/hardhat-ethers ethers dotenv
    ```
 
-4. **Instala echidna (necesario Docker):**
+4. **Instala echidna**
 
-   ```bash
-   docker pull trailofbits/eth-security-toolbox
-   ```
+```bash
+    brew install echidna
+```
 
----
+
+5. **Se puede usar slither-analyzer y el plugin de vs code para detectar malas practicas**
+
+```bash
+pip3 install slither-analyzer --user
+```
+
+Sirve de ayuda la extensión de visual code para ejecutar slither
 
 ## Configuración
 
@@ -83,9 +91,9 @@ Para ejecutar este proyecto localmente, sigue estos pasos:
     VRF_COORDINATOR= # Coordinador en Sepolia
     SUBSCRIPTION_ID= # Id de suscripción de Chainlink
     KEY_HASH= # Key Hash válido para Sepolia
-        ```
+    ```
 
-2.  **Actualiza `hardhat.config.js`:**
+2.  **Actualiza `hardhat.config.ts`:**
 
     Asegúrate de que el archivo `hardhat.config.js` esté configurado para utilizar las variables de entorno. Esto ya debería estar configurado si seguiste el tutorial de instalación.
 
@@ -127,10 +135,9 @@ Para ejecutar este proyecto localmente, sigue estos pasos:
 
 Para ejecutar las pruebas del contrato inteligente y asegurar su funcionamiento, utiliza el siguiente comando:
 
-    npx hardhat test
+    npm run test
 
-Esto ejecutará todos los tests en la carpeta test/ para verificar que las funciones de la lotería se comporten correctamente (por ejemplo, que los participantes puedan unirse y que el ganador se elija aleatoriamente).
-
+Esto ejecutará todos los tests en la carpeta test/ para verificar que las funciones de la lotería se comporten correctamente.
 ## Despliegue
 
 Si deseas desplegar el contrato en la red principal de Ethereum, sigue estos pasos (¡con precaución!):
@@ -150,3 +157,4 @@ Si deseas desplegar el contrato en la red principal de Ethereum, sigue estos pas
 ## Licencia
 
 Este proyecto está licenciado bajo la MIT License. Consulta el archivo LICENSE para obtener más detalles.
+````
