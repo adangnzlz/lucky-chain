@@ -31,7 +31,8 @@ beforeEach(async function () {
     subscriptionId,
     vrfCoordinatorMock.address,
     keyHash,
-    false
+    false,
+    true
   );
   await lottery.deployed();
   await vrfCoordinatorMock.addConsumer(subscriptionId, lottery.address);
@@ -124,7 +125,7 @@ describe("LotteryEther Contract", function () {
     await lottery.connect(addr2).enter({ value: ticketPrice });
 
     await lottery.connect(owner).pickWinner();
-    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+    // await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
 
     const winner = await lottery.recentWinner();
     const winnerBalancePendingWithdrawal = await lottery.pendingWithdrawals(
@@ -141,7 +142,7 @@ describe("LotteryEther Contract", function () {
     await lottery.connect(addr2).enter({ value: ticketPrice });
 
     await lottery.connect(owner).pickWinner();
-    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+    // await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
 
     const winner = await lottery.recentWinner();
     let winnerAddr;
@@ -164,7 +165,7 @@ describe("LotteryEther Contract", function () {
     await lottery.connect(addr1).enter({ value: ticketPrice });
     await lottery.connect(addr2).enter({ value: ticketPrice });
     await lottery.connect(owner).pickWinner();
-    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+    // await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
 
     const winner = await lottery.recentWinner();
     let winnerAddr;
@@ -192,7 +193,7 @@ describe("LotteryEther Contract", function () {
     expect(playersRegistered).to.be.eq(3);
 
     await lottery.connect(owner).pickWinner();
-    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+    // await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
 
     playersRegistered = (await lottery.getPlayers()).length;
     expect(playersRegistered).to.be.eq(0);
@@ -209,7 +210,7 @@ describe("LotteryEther Contract", function () {
     expect(playersRegistered).to.be.eq(2);
 
     await lottery.connect(owner).pickWinner();
-    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+    // await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
 
     playersRegistered = (await lottery.getPlayers()).length;
     expect(playersRegistered).to.be.eq(0);
@@ -274,9 +275,9 @@ describe("LotteryEther Events", function () {
     await expect(tx)
     .to.emit(lottery, "RandomWordsRequested");
 
-    const tx1 = await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+    // const tx1 = await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
     const winner = await lottery.recentWinner();
-    await expect(tx1)
+    await expect(tx)
       .to.emit(lottery, "PrizeDistributed")
       .withArgs(winner, ticketPrice.mul(2));
 

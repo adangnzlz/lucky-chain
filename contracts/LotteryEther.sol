@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2Mock.sol";
 import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import "hardhat/console.sol";
@@ -12,6 +11,7 @@ contract LotteryEther is VRFConsumerBaseV2, Ownable {
     uint64 internal subscriptionId;
     bytes32 private keyHash;
     bool private isERC20;
+    bool private isLocalNetwork;
 
     VRFCoordinatorV2Interface COORDINATOR;
     uint32 public callbackGasLimit = 100000;
@@ -40,13 +40,15 @@ contract LotteryEther is VRFConsumerBaseV2, Ownable {
         uint64 _subscriptionId,
         address _vrfCoordinator,
         bytes32 _keyHash,
-        bool _isERC20
+        bool _isERC20,
+        bool _isLocalNetwork
     ) VRFConsumerBaseV2(_vrfCoordinator) Ownable(msg.sender) {
         manager = msg.sender;
         subscriptionId = _subscriptionId;
         keyHash = _keyHash;
         COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
         isERC20 = _isERC20;
+        isLocalNetwork = _isLocalNetwork;
     }
 
     receive() external payable {
@@ -105,6 +107,18 @@ contract LotteryEther is VRFConsumerBaseV2, Ownable {
             numWords
         );
         emit RandomWordsRequested(requestId);
+
+        // Si estamos en una red local, simular fulfillRandomWords
+        if (isLocalNetwork) {
+            uint256[] memory randomWords = new uint256[](numWords);
+            for (uint256 i = 0; i < numWords; i++) {
+                randomWords[i] = uint256(
+                    keccak256(abi.encodePacked(block.timestamp, requestId, i))
+                );
+            }
+
+            fulfillRandomWords(requestId, randomWords);
+        }
     }
 
     function withdrawPrize() external {

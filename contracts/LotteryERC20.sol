@@ -21,8 +21,17 @@ contract LotteryERC20 is LotteryEther {
         uint64 _subscriptionId,
         address _vrfCoordinator,
         bytes32 _keyHash,
-        address _tokenAddress
-    ) LotteryEther(_subscriptionId, _vrfCoordinator, _keyHash, true) {
+        address _tokenAddress,
+        bool _isLocalNetwork
+    )
+        LotteryEther(
+            _subscriptionId,
+            _vrfCoordinator,
+            _keyHash,
+            true,
+            _isLocalNetwork
+        )
+    {
         token = IERC20(_tokenAddress);
         lotteryTicket = defaultLotteryTicket * 10 ** getDecimals(_tokenAddress);
     }

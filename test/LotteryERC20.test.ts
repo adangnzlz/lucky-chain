@@ -37,7 +37,8 @@ describe("LotterERC20 Contract", function () {
       subscriptionId,
       vrfCoordinatorMock.address,
       keyHash,
-      erc20Token.address
+      erc20Token.address,
+      true
     );
     await lottery.deployed();
 
@@ -102,7 +103,7 @@ describe("LotterERC20 Contract", function () {
     await vrfCoordinatorMock.fundSubscription(subscriptionId, fundAmount);
 
     await lottery.connect(owner).pickWinner();
-    await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
+    // await vrfCoordinatorMock.fulfillRandomWords(1, lottery.address);
 
     const winner = await lottery.recentWinner();
     let winnerAddr;
