@@ -28,7 +28,8 @@ async function deployLotteryEther(
     subscriptionId,
     vrfCoordinatorAddress,
     keyHash,
-    false
+    false,
+    true
   );
   await lotteryEther.deployed();
   console.log("VITE_LOTTERY_ETHER_ADDRESS=" + lotteryEther.address);
@@ -46,7 +47,8 @@ async function deployLotteryERC20(
     subscriptionId,
     vrfCoordinatorAddress,
     keyHash,
-    linkTokenAddress
+    linkTokenAddress,
+    true
   );
   await lotteryLink.deployed();
   console.log("VITE_LOTTERY_LINK_ADDRESS=" + lotteryLink.address);
