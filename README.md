@@ -32,7 +32,7 @@
 - **Solidity**: Programming language used to write the smart contract.
 - **Hardhat**: Tool for developing, testing, and deploying Ethereum smart contracts.
 - **Chainlink VRF**: Verifiable randomness protocol to ensure fairness in winner selection.
-- **RabbyWallet**: Ethereum wallet used by participants to interact with the lottery.
+- **RabbyWallet/Metamask**: Ethereum wallet used by participants to interact with the lottery.
 - **Echidna**: A fuzzing tool for smart contracts that generates random transaction sequences based on the contract’s ABI.
 - **Slither**: For detecting code vulnerabilities and best practice violations.
 
@@ -105,29 +105,49 @@ To run this project locally, follow these steps:
 
    Hardhat creates a local network automatically when you run certain commands. To deploy the contract locally:
 
+   Run the node:
    ```bash
-   npx hardhat run scripts/deploy.js --network hardhat
+   npm run node ## (just run ethereum node)
+   npm run node-watch ## (auto reaload after changes)
+   npm run node-watch-test  ## (auto reaload after changes and rerun tests)
    ```
+
+   Deploy the contracts 
+   ```bash
+   npm run deploy-hardhat
+   ```
+
 
 2. **Interact with the Contract:**
 
    Use Hardhat Console to interact with the contract on the local network:
 
+   Inside the console, you can instantiate the contract and call functions like `enter()` to participate or `pickWinner()` to select a winner or just retreive the ticket price:.
+
    ```bash
-   npx hardhat console --network hardhat
+   npx hardhat console --network localhost
+   const lottery = await ethers.getContractAt("LotteryEther", contractAddress);
+   const ticketPrice = await lottery.lotteryTicket();
    ```
 
-   Inside the console, you can instantiate the contract and call functions like `enter()` to participate or `pickWinner()` to select a winner.
+   ```bash
+   const Lottery = await ethers.getContractFactory("LotteryEther");
+   const lottery = await Lottery.deploy(...);
+   await lottery.deployed();
+   await lottery.enter()
+   ```
+
+
 
 3. **Deploy to a Test Network (optional):**
 
    To deploy the contract on a test network like Rinkeby:
 
    ```bash
-   npx hardhat run scripts/deploy.js --network rinkeby
+   npx hardhat run scripts/deploy-sepolia.ts --network rinkeby
    ```
 
-   Ensure you have test ETH and LINK in your MetaMask account to cover transaction and randomness request costs.
+   Ensure you have ETH (in the owner address) and LINK (in the subscription created in chainlink console https://vrf.chain.link/ ) to cover contract deployment and randomness request costs.
 
 ---
 
@@ -143,24 +163,9 @@ This will execute all tests in the `test/` folder to verify the lottery function
 
 ---
 
-## Deployment
 
-To deploy the contract on Ethereum Mainnet, follow these steps carefully:
-
-1. **Update the `.env` file with credentials for an Infura project and a funded MetaMask account.**
-
-2. **Run the deployment command:**
-
-   ```bash
-   npx hardhat run scripts/deploy.js --network mainnet
-   ```
-
-3. **Ensure you have enough ETH and LINK in your account, as deploying on Mainnet requires real funds.**
-
-**Note:** Deploying on Mainnet incurs significant gas costs and is irreversible. Thoroughly test the contract on a test network before proceeding.
-
----
 
 ## License
-This project was developed & documented by Adán González. 
+
+This project was developed & documented by Adán González.
 This project is licensed under the MIT License. See the LICENSE file for more details.

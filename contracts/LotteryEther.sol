@@ -31,7 +31,6 @@ contract LotteryEther is VRFConsumerBaseV2, Ownable {
     event PlayerEntered(address indexed player, uint256 amount);
     event CallbackGasLimitUpdated(uint32 newGasLimit);
     event LotteryTicketPriceUpdated(uint256 newPrice);
-    event WinnerPicked(address indexed winner);
     event RandomWordsRequested(uint256 requestId);
     event PrizeDistributed(address indexed winner, uint256 amount);
     event PrizeClaimed();
