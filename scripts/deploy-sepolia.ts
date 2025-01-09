@@ -11,7 +11,7 @@ async function deployLotteryEther(
     vrfCoordinatorAddress,
     keyHash,
     false,
-    true
+    false
   );
   await lotteryEther.deployed();
   console.log("VITE_LOTTERY_ETHER_ADDRESS=" + lotteryEther.address);

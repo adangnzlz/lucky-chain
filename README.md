@@ -147,8 +147,9 @@ To run this project locally, follow these steps:
    npx hardhat run scripts/deploy-sepolia.ts --network rinkeby
    ```
 
-   Ensure you have ETH (in the owner address) and LINK (in the subscription created in chainlink console https://vrf.chain.link/ ) to cover contract deployment and randomness request costs.
+   Ensure you have ETH (in the owner address) and LINK (in the subscription created in chainlink console https://vrf.chain.link/. Pending to migrate subscriptions v2.5 ) to cover contract deployment and randomness request costs.
 
+   Balance necessary to upload both contracts aprox 0.15 eth
 ---
 
 ## Testing

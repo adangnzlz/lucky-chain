@@ -20,7 +20,7 @@ contract LotteryEther is VRFConsumerBaseV2, Ownable {
 
     address public manager;
     address[] public players;
-    uint256 public lotteryTicket = 0.01 ether;
+    uint256 public lotteryTicket = 0.0001 ether;
     uint256 public maxTotalFunds = 1000 ether;
 
     uint256 public totalPlayerFunds = 0;
